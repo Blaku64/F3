@@ -1,0 +1,164 @@
+using System;
+using BepInEx;
+using FpsCounter;
+using GorillaNetworking;
+using Photon.Pun;
+using Photon.Realtime;
+using UnityEngine;
+using Utilla;
+
+namespace F3_Mod
+{
+	// Token: 0x02000003 RID: 3
+	[ModdedGamemode]
+	[BepInDependency("org.legoandmars.gorillatag.utilla", "1.5.0")]
+	[BepInPlugin("com.plug.gorillatag.F3Mod", "F3Mod", "1.0.0")]
+	public class Plugin : BaseUnityPlugin
+	{
+		// Token: 0x06000006 RID: 6 RVA: 0x000020C4 File Offset: 0x000002C4
+		private void OnEnable()
+		{
+			HarmonyPatches.ApplyHarmonyPatches();
+			Events.GameInitialized += this.OnGameInitialized;
+		}
+
+		// Token: 0x06000007 RID: 7 RVA: 0x000020DC File Offset: 0x000002DC
+		private void OnDisable()
+		{
+			HarmonyPatches.RemoveHarmonyPatches();
+			Events.GameInitialized -= this.OnGameInitialized;
+		}
+
+		// Token: 0x06000008 RID: 8 RVA: 0x000020F4 File Offset: 0x000002F4
+		private void OnGameInitialized(object sender, EventArgs e)
+		{
+			this.timeleft = this.updateInterval;
+			this.textStyle.fontStyle = FontStyle.Bold;
+			this.textStyle.normal.textColor = Color.white;
+		}
+
+		// Token: 0x06000009 RID: 9 RVA: 0x0000216C File Offset: 0x0000036C
+		private void Update()
+		{
+			this.timeleft -= Time.deltaTime;
+			this.accum += Time.timeScale / Time.deltaTime;
+			this.frames++;
+			if ((double)this.timeleft <= 0.0)
+			{
+				this.fps = this.accum / (float)this.frames;
+				this.timeleft = this.updateInterval;
+				this.accum = 0f;
+				this.frames = 0;
+			}
+		}
+
+		// Token: 0x0600000A RID: 10 RVA: 0x000021FC File Offset: 0x000003FC
+		private void OnGUI()
+		{
+			GUI.backgroundColor = Color.black;
+			this.ModCheck = GUI.Toggle(new Rect(10f, 20f, 100f, 20f), this.ModCheck, "Mod Check");
+			this.F3 = GUI.Toggle(new Rect(10f, 40f, 100f, 20f), this.F3, "Debug");
+			if (this.F3)
+			{
+				GUILayout.BeginVertical(Array.Empty<GUILayoutOption>());
+				GUILayout.Label(string.Concat(new string[]
+				{
+					"\n",
+					"\n",
+					"\n",
+					"\n",
+					"\n",
+					" REGION :  ",
+					PhotonNetworkController.Instance.serverRegions[0].ToString(),
+					"\n",
+					" PLAYERS ONLINE :  ",
+					PhotonNetwork.CountOfPlayers.ToString(),
+					"\n",
+					" PING :  ",
+					PhotonNetwork.GetPing().ToString(),
+					"\n",
+					" NAME :  ",
+					PhotonNetwork.LocalPlayer.NickName,
+					"\n",
+					" USER ID :  ",
+					PhotonNetwork.LocalPlayer.UserId,
+					"\n",
+					" FPS :  ",
+					((int)(1f / Time.smoothDeltaTime)).ToString(),
+					"\n",
+					" CORDS :  ",
+					GameObject.Find("Player VR Controller").transform.position.ToString(),
+					"\n",
+					" MODS :  ",
+					(PhotonNetwork.LocalPlayer.CustomProperties["mods"] != null) ? PhotonNetwork.LocalPlayer.CustomProperties["mods"].ToString() : null,
+					"\n",
+					" ROOM CODE :  ",
+					PhotonNetwork.CurrentRoom.Name.ToString(),
+					" OPEN :  ",
+					PhotonNetwork.CurrentRoom.IsVisible.ToString(),
+					" PEOPLE IN :  ",
+					PhotonNetwork.CurrentRoom.PlayerCount.ToString(),
+					"\n"
+				}), Array.Empty<GUILayoutOption>());
+				GUILayout.EndHorizontal();
+			}
+			if (this.ModCheck)
+			{
+				GUILayout.BeginVertical(Array.Empty<GUILayoutOption>());
+				foreach (Player player in PhotonNetwork.PlayerList)
+				{
+					string[] array = new string[7];
+					array[2] = "</color>, NAME : <color=cyan>";
+					array[3] = player.NickName;
+					array[4] = "</color>, MODS : <color=cyan>";
+					object obj = player.CustomProperties["mods"];
+					array[5] = ((obj != null) ? obj.ToString() : null);
+					array[6] = "</color>)</b>\n";
+					GUILayout.Label(string.Concat(array), Array.Empty<GUILayoutOption>());
+				}
+				GUILayout.EndHorizontal();
+			}
+		}
+
+		// Token: 0x0600000B RID: 11 RVA: 0x00002123 File Offset: 0x00000323
+		[ModdedGamemodeJoin]
+		public void OnJoin(string gamemode)
+		{
+			this.inRoom = true;
+		}
+
+		// Token: 0x0600000C RID: 12 RVA: 0x0000212C File Offset: 0x0000032C
+		[ModdedGamemodeLeave]
+		public void OnLeave(string gamemode)
+		{
+			this.inRoom = false;
+		}
+
+		// Token: 0x04000004 RID: 4
+		public float updateInterval = 0.1f;
+
+		// Token: 0x04000005 RID: 5
+		private float accum;
+
+		// Token: 0x04000006 RID: 6
+		private int frames;
+
+		// Token: 0x04000007 RID: 7
+		private float timeleft;
+
+		// Token: 0x04000008 RID: 8
+		private float fps;
+
+		// Token: 0x04000009 RID: 9
+		private GUIStyle textStyle = new GUIStyle();
+
+		// Token: 0x0400000A RID: 10
+		private bool inRoom;
+
+		// Token: 0x0400000B RID: 11
+		public bool F3;
+
+		// Token: 0x0400000C RID: 12
+		public bool ModCheck;
+	}
+}
